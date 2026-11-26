@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlideCraft</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --bg-primary: var(--color-background-primary, #ffffff);
+      --bg-secondary: var(--color-background-secondary, #f6f7f9);
+      --bg-tertiary: var(--color-background-tertiary, #ebedf2);
+      --text-primary: var(--color-text-primary, #171923);
+      --text-secondary: var(--color-text-secondary, #525866);
+      --text-tertiary: var(--color-text-tertiary, #868c98);
+      --border-primary: var(--color-border-primary, #e2e5ec);
+      --border-secondary: var(--color-border-secondary, #cbd2e1);
+      --accent: var(--color-ring-primary, #0d9488);
+      --accent-soft: rgba(13, 148, 136, 0.14);
+      --save-blue: #2563eb;
+      --danger: #dc2626;
+      --font: var(--font-sans, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif);
+    }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: var(--bg-primary); color: var(--text-primary);
+      font-family: var(--font); font-size: 12.5px; overflow: hidden;
+    }
+    .app-shell { display: flex; flex-direction: column; height: 100vh; min-height: 540px; width: 100%; }
+
+    /* Header & Format Bars */
+    .toolbar, .format-bar {
+      display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+      background: var(--bg-secondary); border-bottom: 1px solid var(--border-primary);
+      flex-shrink: 0; flex-wrap: wrap;
+    }
+    .toolbar { justify-content: space-between; min-height: 40px; }
+    .format-bar { background: var(--bg-primary); min-height: 36px; gap: 5px; }
+    .format-bar.hidden { display: none; }
+    .tb-group { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .tb-sep { width: 1px; height: 18px; background: var(--border-primary); margin: 0 2px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      height: 26px; padding: 0 8px; border-radius: 6px;
+      border: 1px solid var(--border-primary); background: var(--bg-primary);
+      color: var(--text-primary); font-family: inherit; font-size: 12px;
+      cursor: pointer; white-space: nowrap; transition: background 0.12s, border-color 0.12s;
+    }
+    .btn.icon { width: 26px; padding: 0; }
+    .btn:hover:not(:disabled) { background: var(--bg-tertiary); border-color: var(--border-secondary); }
+    .btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .btn.save-btn { background: var(--save-blue); border-color: var(--save-blue); color: #fff; font-weight: 600; }
+    .btn.save-btn:hover:not(:disabled) { filter: brightness(1.07); }
+    .btn.save-btn.clean { background: var(--bg-primary); border-color: var(--border-primary); color: var(--text-secondary); font-weight: 500; }
+    .btn.danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); background: rgba(220,38,38,0.08); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .file-select {
+      height: 26px; max-width: 210px; min-width: 110px; padding: 0 7px;
+      border-radius: 6px; border: 1px solid var(--border-primary);
+      background: var(--bg-primary); color: var(--text-primary); font-size: 12px; font-weight: 500;
+    }
+    .num-input {
+      width: 44px; height: 26px; text-align: center; border-radius: 5px;
+      border: 1px solid var(--border-primary); background: var(--bg-secondary);
+      color: var(--text-primary); font-size: 12px; font-variant-numeric: tabular-nums;
+    }
+    .color-wrap {
+      display: inline-flex; align-items: center; gap: 3px; height: 26px; padding: 0 6px;
+      border-radius: 6px; border: 1px solid var(--border-primary); background: var(--bg-primary);
+      font-size: 11.5px; color: var(--text-secondary); cursor: pointer;
+    }
+    .color-wrap input[type="color"] {
+      width: 16px; height: 16px; border: none; padding: 0; background: transparent; cursor: pointer;
+    }
+    .dirty-pill {
+      font-size: 11px; padding: 2px 7px; border-radius: 999px;
+      background: rgba(234, 88, 12, 0.14); color: #ea580c; font-weight: 600;
+      display: none;
+    }
+    .dirty-pill.show { display: inline-block; }
+
+    .path-bar { display: none; gap: 6px; padding: 6px 10px; background: var(--bg-primary); border-bottom: 1px solid var(--border-primary); }
+    .path-bar.open { display: flex; }
+    .text-input {
+      flex: 1; height: 28px; padding: 0 9px; border-radius: 6px;
+      border: 1px solid var(--border-primary); background: var(--bg-secondary);
+      color: var(--text-primary); font-family: inherit; font-size: 12px; outline: none;
+    }
+    .text-input:focus { border-color: var(--accent); background: var(--bg-primary); }
+
+    /* Workspace: full-width stage on top, horizontal filmstrip below */
+    .workspace { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+    .thumb-rail {
+      width: 100%; height: 108px; flex-shrink: 0; background: var(--bg-secondary);
+      border-top: 1px solid var(--border-primary); overflow-x: auto; overflow-y: hidden;
+      padding: 6px 10px; display: flex; flex-direction: row; align-items: flex-start; gap: 8px;
+    }
+    .thumb-rail.hidden { display: none; }
+    .thumb-item {
+      position: relative; width: 128px; flex-shrink: 0; display: flex; flex-direction: column; gap: 3px;
+      padding: 4px; border-radius: 7px; border: 2px solid transparent; cursor: pointer;
+    }
+    .thumb-item:hover { background: var(--bg-tertiary); }
+    .thumb-item.active { border-color: var(--accent); background: var(--accent-soft); }
+    .thumb-frame {
+      position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 4px;
+      overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+    .thumb-scale-host { position: absolute; top: 0; left: 0; transform-origin: top left; pointer-events: none; }
+    .thumb-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 10.5px; color: var(--text-secondary); }
+    .thumb-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .thumb-actions { position: absolute; top: 6px; right: 6px; display: none; gap: 2px; z-index: 4; }
+    .thumb-item:hover .thumb-actions { display: flex; }
+    .thumb-act-btn {
+      width: 18px; height: 18px; border-radius: 4px; border: none;
+      background: rgba(15, 23, 42, 0.78); color: #fff; font-size: 10px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .thumb-act-btn:hover { background: #0d9488; }
+
+    /* Interactive Stage */
+    .stage-col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--bg-tertiary); position: relative; }
+    .stage-viewport {
+      flex: 1; min-height: 0; overflow: auto; display: flex;
+      align-items: center; justify-content: center; padding: 12px 16px; position: relative;
+    }
+    .slide-outer {
+      position: relative; background: #fff; border-radius: 6px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.16), 0 1px 3px rgba(0,0,0,0.08);
+      flex-shrink: 0; overflow: visible;
+    }
+    .slide-canvas {
+      position: absolute; top: 0; left: 0; transform-origin: top left;
+      overflow: hidden; border-radius: 6px;
+    }
+    .el-node { position: absolute; box-sizing: border-box; user-select: none; cursor: move; }
+    .el-node:hover { outline: 1px dashed rgba(13, 148, 136, 0.55); }
+    .el-node.selected { outline: 2px solid #2563eb; z-index: 20 !important; }
+    .el-node.editing { outline: 2px solid #0d9488; cursor: text; user-select: text; }
+    .el-text-inner {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      box-sizing: border-box; overflow: hidden; outline: none;
+    }
+    .el-node.editing .el-text-inner { overflow: auto; }
+
+    /* Resize handles */
+    .rh { position: absolute; width: 9px; height: 9px; background: #fff; border: 2px solid #2563eb; border-radius: 2px; z-index: 30; }
+    .rh-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+    .rh-n  { top: -5px; left: calc(50% - 4.5px); cursor: ns-resize; }
+    .rh-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+    .rh-e  { top: calc(50% - 4.5px); right: -5px; cursor: ew-resize; }
+    .rh-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+    .rh-s  { bottom: -5px; left: calc(50% - 4.5px); cursor: ns-resize; }
+    .rh-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    .rh-w  { top: calc(50% - 4.5px); left: -5px; cursor: ew-resize; }
+
+    /* Bottom status & resizable speaker notes */
+    .stage-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 10px; background: var(--bg-secondary);
+      border-top: 1px solid var(--border-primary); font-size: 11.5px; color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .v-splitter {
+      height: 10px; flex-shrink: 0; cursor: ns-resize;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; touch-action: none;
+    }
+    .v-splitter::before {
+      content: ''; width: 40px; height: 3px; border-radius: 999px;
+      background: var(--border-secondary); transition: background 0.12s, width 0.12s;
+    }
+    .v-splitter:hover::before, .v-splitter.dragging::before { background: var(--accent); width: 56px; }
+    .v-splitter.dark::before { background: rgba(255,255,255,0.28); }
+    .v-splitter.dark:hover::before, .v-splitter.dark.dragging::before { background: #2dd4bf; }
+
+    .notes-editor-wrap {
+      background: var(--bg-primary); border-top: 1px solid var(--border-primary);
+      padding: 0 12px 8px; height: 150px; min-height: 78px; max-height: 70vh;
+      display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+    }
+    .notes-editor-wrap.hidden { display: none; }
+    .notes-textarea {
+      width: 100%; flex: 1; min-height: 44px; resize: none;
+      border: 1px solid var(--border-primary); border-radius: 6px; padding: 6px 8px;
+      background: var(--bg-secondary); color: var(--text-primary);
+      font-family: inherit; font-size: 12.5px; line-height: 1.55; outline: none;
+    }
+    .notes-textarea:focus { border-color: var(--accent); background: var(--bg-primary); }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; gap: 12px; text-align: center; overflow-y: auto;
+    }
+    .recent-list { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+    .recent-card {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border-primary);
+      background: var(--bg-secondary); cursor: pointer;
+    }
+    .recent-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+    /* Fullscreen Presenter Mode */
+    .fs-overlay {
+      position: fixed; inset: 0; background: #0b0d12; z-index: 100;
+      display: none; flex-direction: column; align-items: stretch;
+    }
+    .fs-overlay.open { display: flex; }
+    .fs-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 14px 20px; overflow: hidden; }
+    .fs-notes-panel {
+      flex-shrink: 0; height: 190px; min-height: 80px; max-height: 75vh; background: #131722;
+      border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-direction: column; color: #e5e7eb;
+    }
+    .fs-notes-panel.hidden { display: none; }
+    .fs-notes-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 6px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; color: #94a3b8;
+    }
+    .fs-notes-body { flex: 1; overflow-y: auto; padding: 10px 18px 12px; font-size: 14px; line-height: 1.65; color: #f1f5f9; white-space: pre-wrap; }
+    .fs-controls {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 8px 16px; background: #0e1118; color: #fff; border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .fs-controls button {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14);
+      color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    }
+    .fs-controls button.active { background: rgba(13,148,136,0.45); border-color: #2dd4bf; }
+
+    .toast {
+      position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%);
+      padding: 6px 12px; border-radius: 8px; background: #111827; color: #fff;
+      font-size: 12px; z-index: 120; opacity: 0; pointer-events: none; transition: opacity 0.16s;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Top Bar -->
+    <div class="toolbar">
+      <div class="tb-group" style="flex:1;">
+        <button id="btnToggleRail" class="btn icon active" title="Toggle slide strip">☰</button>
+        <select id="fileSelect" class="file-select"><option value="">Select deck...</option></select>
+        <button id="btnOpenPath" class="btn icon" title="Open file by path">📂</button>
+        <button id="btnReload" class="btn icon" title="Reload from disk">↻</button>
+        <span id="dirtyPill" class="dirty-pill">Unsaved</span>
+      </div>
+      <div class="tb-group">
+        <button id="btnUndo" class="btn icon" title="Undo" disabled>↶</button>
+        <button id="btnRedo" class="btn icon" title="Redo" disabled>↷</button>
+        <button id="btnSave" class="btn save-btn clean" disabled>Save</button>
+        <button id="btnOpenApp" class="btn" disabled>Open App</button>
+        <button id="btnReveal" class="btn icon" title="Reveal in file manager" disabled>🔍</button>
+        <button id="btnLang" class="btn" title="Switch UI language">EN</button>
+        <button id="btnPresent" class="btn active" title="Fullscreen Presenter (F)" disabled>▶ Present</button>
+      </div>
+    </div>
+
+    <!-- Formatting Toolbar -->
+    <div id="formatBar" class="format-bar hidden">
+      <button id="btnAddText" class="btn">+ Text Box</button>
+      <div class="tb-sep"></div>
+      <button id="btnFontDec" class="btn icon" disabled>A-</button>
+      <input id="fontSizeInput" class="num-input" type="number" min="8" max="120" step="1" value="18" disabled />
+      <button id="btnFontInc" class="btn icon" disabled>A+</button>
+      <div class="tb-sep"></div>
+      <button id="btnBold" class="btn icon" disabled><b>B</b></button>
+      <button id="btnItalic" class="btn icon" disabled><i>I</i></button>
+      <button id="btnUnderline" class="btn icon" disabled><u>U</u></button>
+      <div class="tb-sep"></div>
+      <label class="color-wrap"><span id="lblTextColor">Text</span><input id="textColorInput" type="color" value="#111827" disabled /></label>
+      <label class="color-wrap"><span id="lblFillColor">Fill</span><input id="fillColorInput" type="color" value="#ffffff" disabled /></label>
+      <button id="btnFillClear" class="btn" disabled>No Fill</button>
+      <div class="tb-sep"></div>
+      <button id="btnAlignL" class="btn icon" disabled>⫷</button>
+      <button id="btnAlignC" class="btn icon" disabled>≡</button>
+      <button id="btnAlignR" class="btn icon" disabled>⫸</button>
+      <div class="tb-sep"></div>
+      <button id="btnDeleteEl" class="btn danger" disabled>Delete</button>
+    </div>
+
+    <!-- Custom Path Bar -->
+    <div id="pathBar" class="path-bar">
+      <input id="customPathInput" class="text-input" placeholder="Enter absolute path to a local .pptx deck..." />
+      <button id="btnLoadPath" class="btn save-btn">Open</button>
+      <button id="btnCancelPath" class="btn">Cancel</button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state">
+      <h3 id="emptyTitle" style="margin:0;font-size:16px;">SlideCraft — Lossless Slide Editor</h3>
+      <p id="emptyDesc" style="margin:0;color:var(--text-secondary);max-width:380px;line-height:1.5;">
+        Click any shape or table cell to style or drag, double-click to edit text in place, and press Save to write changes directly back to the source .pptx deck.
+      </p>
+      <div style="display:flex;gap:6px;width:100%;max-width:420px;">
+        <input id="emptyPathInput" class="text-input" placeholder="Paste path to a local .pptx file..." />
+        <button id="btnEmptyOpen" class="btn save-btn">Open</button>
+      </div>
+      <div id="emptyRecentList" class="recent-list"></div>
+    </div>
+
+    <!-- Editor Workspace -->
+    <div id="editorWorkspace" class="workspace" style="display:none;">
+      <div class="stage-col">
+        <div id="stageViewport" class="stage-viewport">
+          <div id="slideOuter" class="slide-outer">
+            <div id="slideCanvas" class="slide-canvas"></div>
+          </div>
+        </div>
+
+        <div class="stage-bar">
+          <div class="tb-group">
+            <button id="btnToggleNotes" class="btn">Notes</button>
+            <span id="hintLabel" style="color:var(--text-tertiary);">Click to drag · Double-click to edit text · Save writes to .pptx</span>
+          </div>
+          <div class="tb-group">
+            <button id="btnPrev" class="btn icon">‹</button>
+            <span id="slideCounter" style="font-weight:600;min-width:48px;text-align:center;">1 / 1</span>
+            <button id="btnNext" class="btn icon">›</button>
+          </div>
+        </div>
+
+        <div id="notesWrap" class="notes-editor-wrap hidden">
+          <div id="notesSplitter" class="v-splitter" title="Drag vertically to resize notes"></div>
+          <textarea id="notesTextarea" class="notes-textarea" placeholder="Speaker notes for this slide..."></textarea>
+        </div>
+      </div>
+
+      <aside id="thumbRail" class="thumb-rail"></aside>
+    </div>
+  </div>
+
+  <!-- Fullscreen Presenter Mode -->
+  <div id="fsOverlay" class="fs-overlay">
+    <div id="fsStage" class="fs-stage">
+      <div id="fsSlideOuter" class="slide-outer"><div id="fsSlideCanvas" class="slide-canvas"></div></div>
+    </div>
+    <div id="fsNotesPanel" class="fs-notes-panel">
+      <div id="fsNotesSplitter" class="v-splitter dark" title="Drag vertically to resize notes"></div>
+      <div class="fs-notes-header">
+        <span id="fsNotesHeading">Speaker Notes</span>
+        <span id="fsNotesTitle" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#cbd5e1;"></span>
+        <div style="display:flex;gap:4px;">
+          <button id="fsNotesDec" class="btn" style="height:20px;padding:0 6px;background:rgba(255,255,255,0.1);color:#fff;border:none;">A-</button>
+          <button id="fsNotesInc" class="btn" style="height:20px;padding:0 6px;background:rgba(255,255,255,0.1);color:#fff;border:none;">A+</button>
+        </div>
+      </div>
+      <div id="fsNotesBody" class="fs-notes-body"></div>
+    </div>
+    <div class="fs-controls">
+      <button id="fsPrev">← Prev</button>
+      <span id="fsCounter">1 / 1</span>
+      <button id="fsNext">Next →</button>
+      <button id="fsToggleNotes" class="active">Notes (N)</button>
+      <button id="fsClose">Exit (Esc)</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+/*__INLINE_EXT_APPS_SDK__*/
+  </script>
+
+  <script type="module">
+const { App, applyDocumentTheme, applyHostStyleVariables } = window.__McpExtApps || {};
+const byId = (id) => document.getElementById(id);
+const IS_MAC = /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+const MOD_KEY = IS_MAC ? '⌘' : 'Ctrl+';
+
+const I18N = {
+  en: {
+    noFiles: 'No .pptx files found',
+    slidesUnit: 'slides',
+    unsaved: (n) => `Unsaved (${n})`,
+    saveBtn: `Save (${MOD_KEY}S)`,
+    savedBtn: 'Saved',
+    savingBtn: 'Saving...',
+    openApp: 'Open App',
+    present: '▶ Present',
+    addText: '+ Text Box',
+    textColor: 'Text',
+    fillColor: 'Fill',
+    noFill: 'No Fill',
+    del: 'Delete',
+    open: 'Open',
+    edit: 'Edit',
+    cancel: 'Cancel',
+    emptyTitle: 'SlideCraft — Lossless Slide Editor',
+    emptyDesc: `Click any shape or table cell to style or drag, double-click to edit text in place, and press ${MOD_KEY}S to save directly back to the source .pptx deck.`,
+    pathPh: 'Enter absolute path to a local .pptx deck...',
+    notesBtn: 'Notes',
+    notesPh: 'Speaker notes for this slide...',
+    noNotes: '(No speaker notes for this slide)',
+    hint: `Click to drag · Double-click to edit text · ${MOD_KEY}S saves to .pptx`,
+    fsHeading: 'Speaker Notes',
+    fsPrev: '← Prev',
+    fsNext: 'Next →',
+    fsNotes: 'Notes (N)',
+    fsExit: 'Exit (Esc)',
+    defaultNewText: 'Double-click to edit',
+    savedToast: (n) => `Saved ${n} change(s) to source .pptx`,
+    movedToast: (a, b) => `Moved slide ${a} to position ${b}`,
+    openingApp: 'Opening in default desktop app...',
+    movePrev: 'Move slide left',
+    moveNext: 'Move slide right',
+    langLabel: 'EN',
+  },
+  zh: {
+    noFiles: '暂无 .pptx 文件',
+    slidesUnit: '页',
+    unsaved: (n) => `未保存 (${n})`,
+    saveBtn: `保存 (${MOD_KEY}S)`,
+    savedBtn: '已保存',
+    savingBtn: '保存中...',
+    openApp: '外部打开',
+    present: '▶ 放映',
+    addText: '+ 文本框',
+    textColor: '字色',
+    fillColor: '底色',
+    noFill: '透明',
+    del: '删除',
+    open: '打开',
+    edit: '编辑',
+    cancel: '取消',
+    emptyTitle: 'SlideCraft 无损幻灯片编辑器',
+    emptyDesc: `单击选中形状或单元格即可调样式与拖拽排版，双击直接改字，按 ${MOD_KEY}S 原位无损写回源 .pptx 文件。`,
+    pathPh: '输入本地 .pptx 绝对路径...',
+    notesBtn: '演讲者备注',
+    notesPh: '在此输入当前页演讲者备注...',
+    noNotes: '（此页暂无演讲者备注）',
+    hint: `单击拖动 · 双击改字 · ${MOD_KEY}S 保存回源文件`,
+    fsHeading: '演讲者备注',
+    fsPrev: '← 上一页',
+    fsNext: '下一页 →',
+    fsNotes: '备注 (N)',
+    fsExit: '退出 (Esc)',
+    defaultNewText: '双击编辑文字',
+    savedToast: (n) => `已无损保存 ${n} 处修改到源 .pptx`,
+    movedToast: (a, b) => `已将第 ${a} 页移动到第 ${b} 页并保存`,
+    openingApp: '正在用默认应用打开...',
+    movePrev: '前移此页',
+    moveNext: '后移此页',
+    langLabel: '中',
+  },
+};
+
+const state = {
+  lang: 'en',
+  deck: null,
+  activeSlide: 1,
+  scene: null,
+  selectedId: null,
+  selectedCell: null,
+  editingId: null,
+  stageScale: 1,
+  pendingOps: [],
+  notesDirty: false,
+  undoStack: [],
+  redoStack: [],
+  tempIdSeq: 1,
+  thumbCache: new Map(),
+  isFullscreen: false,
+  fsNotesVisible: true,
+  fsNotesFont: 14,
+  receivedToolEvent: false,
+  pendingInputArgs: null,
+};
+
+function t(key, ...args) {
+  const v = (I18N[state.lang] || I18N.en)[key];
+  return typeof v === 'function' ? v(...args) : (v ?? key);
+}
+
+function applyLocaleUI() {
+  document.documentElement.lang = state.lang === 'zh' ? 'zh-CN' : 'en';
+  byId('btnLang').textContent = t('langLabel');
+  byId('btnOpenApp').textContent = t('openApp');
+  byId('btnPresent').textContent = t('present');
+  byId('btnAddText').textContent = t('addText');
+  byId('lblTextColor').textContent = t('textColor');
+  byId('lblFillColor').textContent = t('fillColor');
+  byId('btnFillClear').textContent = t('noFill');
+  byId('btnDeleteEl').textContent = t('del');
+  byId('btnLoadPath').textContent = t('open');
+  byId('btnCancelPath').textContent = t('cancel');
+  byId('emptyTitle').textContent = t('emptyTitle');
+  byId('emptyDesc').textContent = t('emptyDesc');
+  byId('customPathInput').placeholder = t('pathPh');
+  byId('emptyPathInput').placeholder = t('pathPh');
+  byId('btnEmptyOpen').textContent = t('open');
+  byId('btnToggleNotes').textContent = t('notesBtn');
+  byId('hintLabel').textContent = t('hint');
+  byId('notesTextarea').placeholder = t('notesPh');
+  byId('fsNotesHeading').textContent = t('fsHeading');
+  byId('fsPrev').textContent = t('fsPrev');
+  byId('fsNext').textContent = t('fsNext');
+  byId('fsToggleNotes').textContent = t('fsNotes');
+  byId('fsClose').textContent = t('fsExit');
+  if (state.scene) {
+    byId('fsNotesBody').textContent = state.scene.notes || t('noNotes');
+  }
+  updateDirtyUI();
+}
+
+function detectLocale(hostLocale) {
+  const loc = String(hostLocale || navigator.language || 'en').toLowerCase();
+  return loc.startsWith('zh') ? 'zh' : 'en';
+}
+
+function showToast(msg) {
+  const el = byId('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+window.addEventListener('error', (e) => showToast(`Error: ${e.message || 'Unknown error'}`));
+
+const app = new App({ name: 'SlideCraft', version: '1.0.0' }, {});
+
+function applyHostCtx(ctx) {
+  if (!ctx) return;
+  if (ctx.theme && applyDocumentTheme) applyDocumentTheme(ctx.theme);
+  if (ctx.styles?.variables && applyHostStyleVariables) applyHostStyleVariables(ctx.styles.variables);
+  if (ctx.locale && !state._userPickedLang) {
+    state.lang = detectLocale(ctx.locale);
+    applyLocaleUI();
+  }
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function isDirty() { return state.pendingOps.length > 0 || state.notesDirty; }
+
+function updateDirtyUI() {
+  const dirty = isDirty();
+  const count = state.pendingOps.length + (state.notesDirty ? 1 : 0);
+  byId('dirtyPill').textContent = t('unsaved', count);
+  byId('dirtyPill').classList.toggle('show', dirty);
+  const saveBtn = byId('btnSave');
+  saveBtn.disabled = !state.deck || !dirty;
+  saveBtn.classList.toggle('clean', !dirty);
+  saveBtn.textContent = dirty ? t('saveBtn') : t('savedBtn');
+  byId('btnUndo').disabled = state.undoStack.length === 0;
+  byId('btnRedo').disabled = state.redoStack.length === 0;
+}
+
+function pushUndoSnapshot() {
+  if (!state.scene) return;
+  state.undoStack.push({
+    scene: JSON.parse(JSON.stringify(state.scene)),
+    ops: JSON.parse(JSON.stringify(state.pendingOps)),
+    notesDirty: state.notesDirty,
+  });
+  if (state.undoStack.length > 40) state.undoStack.shift();
+  state.redoStack = [];
+  updateDirtyUI();
+}
+
+function recordOp(op) {
+  if (op.op === 'geometry' && state.pendingOps.length > 0) {
+    const last = state.pendingOps[state.pendingOps.length - 1];
+    if (last.op === 'geometry' && last.shape_id === op.shape_id) {
+      Object.assign(last, op);
+      updateDirtyUI();
+      return;
+    }
+  }
+  state.pendingOps.push(op);
+  updateDirtyUI();
+}
+
+function getSelectedEl() {
+  if (!state.scene || state.selectedId == null) return null;
+  return state.scene.elements.find((e) => String(e.shape_id) === String(state.selectedId)) || null;
+}
+
+function renderFileOptions(files, selectedPath) {
+  const sel = byId('fileSelect');
+  sel.innerHTML = '';
+  if (!files || !files.length) {
+    sel.innerHTML = `<option value="">${escapeHtml(t('noFiles'))}</option>`;
+  } else {
+    for (const f of files) {
+      const opt = document.createElement('option');
+      opt.value = f.file_path;
+      opt.textContent = f.file_name + (f.slide_count ? ` (${f.slide_count} ${t('slidesUnit')})` : '');
+      if (selectedPath && f.file_path === selectedPath) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  const list = byId('emptyRecentList');
+  list.innerHTML = '';
+  for (const f of (files || []).slice(0, 6)) {
+    const c = document.createElement('div');
+    c.className = 'recent-card';
+    c.innerHTML = `<div style="min-width:0;"><div style="font-weight:600;">${escapeHtml(f.file_name)}</div><div style="font-size:11px;color:var(--text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:290px;">${escapeHtml(f.file_path)}</div></div><span class="btn">${escapeHtml(t('edit'))}</span>`;
+    c.onclick = () => loadDeck(f.file_path, 1);
+    list.appendChild(c);
+  }
+}
+
+function applyOverview(ov) {
+  if (!ov) return;
+  renderFileOptions(ov.recent_files || [], ov.file_path);
+  if (!ov.has_deck) {
+    state.deck = null;
+    byId('emptyState').style.display = '';
+    byId('editorWorkspace').style.display = 'none';
+    byId('formatBar').classList.add('hidden');
+    byId('btnOpenApp').disabled = true;
+    byId('btnReveal').disabled = true;
+    byId('btnPresent').disabled = true;
+    updateDirtyUI();
+    return;
+  }
+  state.deck = ov;
+  state.activeSlide = ov.active_slide || 1;
+  state.thumbCache.clear();
+  byId('emptyState').style.display = 'none';
+  byId('editorWorkspace').style.display = '';
+  byId('formatBar').classList.remove('hidden');
+  byId('btnOpenApp').disabled = false;
+  byId('btnReveal').disabled = false;
+  byId('btnPresent').disabled = false;
+  buildThumbRail();
+  loadSlide(state.activeSlide);
+  loadThumbsInBatches();
+}
+
+function buildThumbRail() {
+  const rail = byId('thumbRail');
+  rail.innerHTML = '';
+  const deck = state.deck;
+  if (!deck) return;
+  const aspect = `${deck.width} / ${deck.height}`;
+  for (const item of deck.outline || []) {
+    const div = document.createElement('div');
+    div.className = 'thumb-item' + (item.index === state.activeSlide ? ' active' : '');
+    div.dataset.index = String(item.index);
+    div.innerHTML = `
+      <div class="thumb-actions">
+        <button class="thumb-act-btn" data-act="up" title="${escapeHtml(t('movePrev'))}">←</button>
+        <button class="thumb-act-btn" data-act="down" title="${escapeHtml(t('moveNext'))}">→</button>
+      </div>
+      <div class="thumb-frame" id="thumbFrame_${item.index}" style="aspect-ratio:${aspect};">
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;">#${item.index}</div>
+      </div>
+      <div class="thumb-meta">
+        <span style="font-weight:600;">${item.index}</span>
+        <span class="thumb-title">${escapeHtml(item.title)}</span>
+      </div>
+    `;
+    div.onclick = (e) => {
+      const actBtn = e.target.closest('.thumb-act-btn');
+      if (actBtn) {
+        e.stopPropagation();
+        const target = actBtn.dataset.act === 'up' ? item.index - 1 : item.index + 1;
+        if (target >= 1 && target <= deck.slide_count) moveSlide(item.index, target);
+        return;
+      }
+      switchSlide(item.index);
+    };
+    rail.appendChild(div);
+  }
+}
+
+async function moveSlide(fromIdx, toIdx) {
+  if (isDirty()) await saveCurrentSlide();
+  try {
+    const res = await app.callServerTool({
+      name: 'app_slide_op',
+      arguments: { file_path: state.deck.file_path, action: 'move', slide_index: fromIdx, target_index: toIdx },
+    });
+    if (res?.structuredContent) {
+      applyOverview(res.structuredContent);
+      showToast(t('movedToast', fromIdx, toIdx));
+    }
+  } catch (err) {
+    showToast(`Move failed: ${err?.message || err}`);
+  }
+}
+
+async function loadThumbsInBatches() {
+  const deck = state.deck;
+  if (!deck) return;
+  const key = `${deck.file_path}|${deck.mtime}`;
+  for (let start = 1; start <= deck.slide_count; start += 4) {
+    if (!state.deck || `${state.deck.file_path}|${state.deck.mtime}` !== key) return;
+    try {
+      const res = await app.callServerTool({
+        name: 'app_get_thumbnails',
+        arguments: { file_path: deck.file_path, start, count: 4 },
+      });
+      for (const sc of res?.structuredContent?.thumbnails || []) {
+        state.thumbCache.set(sc.index, sc);
+        renderThumbScene(sc);
+      }
+    } catch (_) { break; }
+  }
+}
+
+function renderThumbScene(sc) {
+  const frame = byId(`thumbFrame_${sc.index}`);
+  if (!frame) return;
+  frame.innerHTML = '';
+  const host = document.createElement('div');
+  host.className = 'thumb-scale-host';
+  const scale = (frame.clientWidth || 116) / (sc.width || 960);
+  host.style.width = `${sc.width}px`;
+  host.style.height = `${sc.height}px`;
+  host.style.transform = `scale(${scale})`;
+  host.style.background = sc.background || '#fff';
+  host.style.overflow = 'hidden';
+  renderElementsStatic(host, sc.backdrop || [], sc.pt_to_px || 1);
+  renderElementsStatic(host, sc.elements || [], sc.pt_to_px || 1);
+  frame.appendChild(host);
+}
+
+async function switchSlide(idx) {
+  if (!state.deck) return;
+  const target = Math.max(1, Math.min(state.deck.slide_count, idx));
+  if (target === state.activeSlide && state.scene) return;
+  if (isDirty()) await saveCurrentSlide();
+  loadSlide(target);
+}
+
+async function loadSlide(idx) {
+  const deck = state.deck;
+  if (!deck) return;
+  const clamped = Math.max(1, Math.min(deck.slide_count, idx));
+  state.activeSlide = clamped;
+  state.selectedId = null;
+  state.selectedCell = null;
+  state.editingId = null;
+  state.pendingOps = [];
+  state.notesDirty = false;
+  state.undoStack = [];
+  state.redoStack = [];
+  updateDirtyUI();
+
+  for (const el of byId('thumbRail').querySelectorAll('.thumb-item')) {
+    const act = Number(el.dataset.index) === clamped;
+    el.classList.toggle('active', act);
+    if (act) el.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  }
+  byId('slideCounter').textContent = `${clamped} / ${deck.slide_count}`;
+  byId('fsCounter').textContent = `${clamped} / ${deck.slide_count}`;
+  byId('btnPrev').disabled = clamped <= 1;
+  byId('btnNext').disabled = clamped >= deck.slide_count;
+
+  try {
+    const res = await app.callServerTool({
+      name: 'app_get_slide_scene',
+      arguments: { file_path: deck.file_path, slide_index: clamped },
+    });
+    if (res?.structuredContent) {
+      state.scene = res.structuredContent;
+      byId('notesTextarea').value = state.scene.notes || '';
+      byId('fsNotesTitle').textContent = state.scene.title || '';
+      byId('fsNotesBody').textContent = state.scene.notes || t('noNotes');
+      renderSceneCanvas();
+      syncFormatBar();
+    }
+  } catch (err) {
+    showToast(`Failed to load slide ${clamped}: ${err?.message || err}`);
+  }
+}
+
+function shapeRadiusCss(el) {
+  if (el.prst === 'ellipse') return '50%';
+  if (el.prst && el.prst.includes('round')) return `${Math.min(el.w, el.h) * 0.14}px`;
+  return '0px';
+}
+
+function renderParagraphsHtml(el, ptToPx) {
+  const paras = el.paragraphs || [];
+  const out = [];
+  for (const p of paras) {
+    const bullet = p.bullet && p.text.trim() ? `<span style="margin-right:5px;">${escapeHtml(p.bullet)}</span>` : '';
+    const runs = p.runs && p.runs.length ? p.runs : [{
+      text: p.text, font_size_pt: p.font_size_pt, bold: p.bold,
+      italic: p.italic, underline: p.underline, color: p.color, font: p.font,
+    }];
+    const rHtml = runs.map((r) => {
+      if (r.br) return '<br/>';
+      const px = Math.max(7, (r.font_size_pt || 16) * ptToPx);
+      const st = [
+        `font-size:${px.toFixed(1)}px`,
+        `color:${r.color || '#111827'}`,
+        `font-family:'${escapeHtml(r.font || 'Inter')}','Inter','PingFang SC','Microsoft YaHei',sans-serif`,
+        r.bold ? 'font-weight:700' : 'font-weight:400',
+        r.italic ? 'font-style:italic' : '',
+        r.underline ? 'text-decoration:underline' : '',
+      ].filter(Boolean).join(';');
+      return `<span style="${st}">${escapeHtml(r.text)}</span>`;
+    }).join('');
+    out.push(`<div style="text-align:${p.align || 'left'};line-height:1.25;margin-left:${(p.level || 0) * 14}px;word-wrap:break-word;">${bullet}${rHtml || '&nbsp;'}</div>`);
+  }
+  return out.join('');
+}
+
+function buildElementNode(el, ptToPx, interactive) {
+  const div = document.createElement('div');
+  div.className = interactive ? 'el-node' : '';
+  div.style.position = 'absolute';
+  div.style.left = `${el.x}px`;
+  div.style.top = `${el.y}px`;
+  div.style.width = `${el.w}px`;
+  div.style.height = `${el.h}px`;
+  if (el.rot) div.style.transform = `rotate(${el.rot}deg)`;
+
+  if (el.kind === 'image') {
+    const img = document.createElement('img');
+    img.src = el.data_uri;
+    img.draggable = false;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;';
+    div.appendChild(img);
+  } else if (el.kind === 'line') {
+    div.innerHTML = `<svg viewBox="0 0 ${Math.max(1, el.w)} ${Math.max(1, el.h)}" style="width:100%;height:100%;overflow:visible;pointer-events:none;"><line x1="0" y1="0" x2="${el.w}" y2="${el.h}" stroke="${el.stroke || '#2563EB'}" stroke-width="${el.stroke_w || 2}"/></svg>`;
+  } else if (el.kind === 'chart') {
+    div.innerHTML = el.svg || '';
+    div.style.overflow = 'hidden';
+  } else if (el.kind === 'group') {
+    for (const ch of el.children || []) div.appendChild(buildElementNode(ch, ptToPx, false));
+  } else if (el.kind === 'table') {
+    const tbl = document.createElement('table');
+    tbl.style.cssText = 'width:100%;height:100%;border-collapse:collapse;table-layout:fixed;';
+    for (const row of el.rows || []) {
+      const tr = document.createElement('tr');
+      for (const cell of row) {
+        const td = document.createElement('td');
+        if (cell.colspan > 1) td.colSpan = cell.colspan;
+        if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
+        const px = Math.max(8, (cell.font_size_pt || 12) * ptToPx);
+        const isSelCell = interactive && state.selectedCell &&
+          String(state.selectedCell.shape_id) === String(el.shape_id) &&
+          state.selectedCell.r === cell.r && state.selectedCell.c === cell.c;
+        td.dataset.r = String(cell.r);
+        td.dataset.c = String(cell.c);
+        td.style.cssText = `background:${cell.bg || 'transparent'};color:${cell.color || '#111827'};font-size:${px.toFixed(1)}px;font-weight:${cell.bold ? 700 : 400};font-style:${cell.italic ? 'italic' : 'normal'};text-decoration:${cell.underline ? 'underline' : 'none'};text-align:${cell.align || 'left'};border:1px solid #d1d5db;padding:3px 5px;vertical-align:middle;word-wrap:break-word;${isSelCell ? 'box-shadow:inset 0 0 0 2px #0d9488;' : ''}`;
+        td.textContent = cell.text;
+        if (interactive) {
+          td.addEventListener('pointerdown', (ev) => {
+            state.selectedCell = { shape_id: el.shape_id, r: cell.r, c: cell.c };
+            for (const other of tbl.querySelectorAll('td')) other.style.boxShadow = '';
+            td.style.boxShadow = 'inset 0 0 0 2px #0d9488';
+            if (String(state.selectedId) === String(el.shape_id)) syncFormatBar();
+            if (td.isContentEditable) ev.stopPropagation();
+          });
+          td.addEventListener('dblclick', (ev) => {
+            ev.stopPropagation();
+            if (td.isContentEditable) return;
+            state.selectedId = el.shape_id;
+            state.selectedCell = { shape_id: el.shape_id, r: cell.r, c: cell.c };
+            state.editingId = el.shape_id;
+            div.classList.add('selected', 'editing');
+            for (const h of div.querySelectorAll('.rh')) h.remove();
+            td.contentEditable = 'true';
+            td.style.userSelect = 'text';
+            td.style.cursor = 'text';
+            td.style.outline = '2px solid #0d9488';
+            td.style.outlineOffset = '-2px';
+            td.focus();
+            const commitCell = () => {
+              td.contentEditable = 'false';
+              td.style.userSelect = '';
+              td.style.cursor = '';
+              td.style.outline = '';
+              td.style.outlineOffset = '';
+              if (String(state.editingId) === String(el.shape_id)) state.editingId = null;
+              div.classList.remove('editing');
+              const newVal = td.innerText.replace(/\r/g, '');
+              if (newVal !== cell.text) {
+                pushUndoSnapshot();
+                cell.text = newVal;
+                recordOp({ op: 'table_cell', shape_id: el.shape_id, r: cell.r, c: cell.c, text: newVal });
+                renderThumbScene(state.scene);
+              }
+              renderSceneCanvas();
+            };
+            td.addEventListener('blur', commitCell, { once: true });
+            td.addEventListener('keydown', (ke) => {
+              if (ke.key === 'Escape') { ke.stopPropagation(); td.blur(); }
+            });
+          });
+        }
+        tr.appendChild(td);
+      }
+      tbl.appendChild(tr);
+    }
+    div.appendChild(tbl);
+  } else {
+    if (el.fill && el.fill !== 'transparent') div.style.background = el.fill;
+    if (el.stroke) div.style.border = `${el.stroke_w || 1}px solid ${el.stroke}`;
+    div.style.borderRadius = shapeRadiusCss(el);
+    const inner = document.createElement('div');
+    inner.className = 'el-text-inner';
+    const jc = el.v_align === 'middle' ? 'center' : (el.v_align === 'bottom' ? 'flex-end' : 'flex-start');
+    const pad = el.pad || { l: 6, r: 6, t: 4, b: 4 };
+    inner.style.justifyContent = jc;
+    inner.style.padding = `${pad.t}px ${pad.r}px ${pad.b}px ${pad.l}px`;
+    inner.innerHTML = renderParagraphsHtml(el, ptToPx);
+    div.appendChild(inner);
+  }
+
+  if (interactive) {
+    div.dataset.shapeId = String(el.shape_id);
+    attachElementInteractions(div, el);
+  }
+  return div;
+}
+
+function renderElementsStatic(container, elements, ptToPx) {
+  for (const el of elements) container.appendChild(buildElementNode(el, ptToPx, false));
+}
+
+function renderSceneCanvas() {
+  const sc = state.scene;
+  if (!sc) return;
+  const vp = byId('stageViewport');
+  const outer = byId('slideOuter');
+  const canvas = byId('slideCanvas');
+
+  const availW = Math.max(240, vp.clientWidth - 32);
+  const availH = Math.max(160, vp.clientHeight - 24);
+  const scale = Math.max(0.25, Math.min(2.0, Math.min(availW / sc.width, availH / sc.height)));
+  state.stageScale = scale;
+
+  outer.style.width = `${Math.round(sc.width * scale)}px`;
+  outer.style.height = `${Math.round(sc.height * scale)}px`;
+  canvas.style.width = `${sc.width}px`;
+  canvas.style.height = `${sc.height}px`;
+  canvas.style.transform = `scale(${scale})`;
+  canvas.style.background = sc.background || '#ffffff';
+  canvas.innerHTML = '';
+
+  const bgLayer = document.createElement('div');
+  bgLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+  renderElementsStatic(bgLayer, sc.backdrop || [], sc.pt_to_px || 1);
+  canvas.appendChild(bgLayer);
+
+  for (const el of sc.elements || []) {
+    const node = buildElementNode(el, sc.pt_to_px || 1, true);
+    if (String(el.shape_id) === String(state.selectedId)) {
+      node.classList.add('selected');
+      if (String(el.shape_id) === String(state.editingId)) node.classList.add('editing');
+      else addResizeHandles(node, el);
+    }
+    canvas.appendChild(node);
+  }
+
+  if (state.isFullscreen) renderFullscreenScene();
+}
+
+function renderFullscreenScene() {
+  const sc = state.scene;
+  if (!sc) return;
+  const stg = byId('fsStage');
+  const outer = byId('fsSlideOuter');
+  const canvas = byId('fsSlideCanvas');
+  const scale = Math.max(0.25, Math.min(2.4, Math.min((stg.clientWidth - 40) / sc.width, (stg.clientHeight - 28) / sc.height)));
+  outer.style.width = `${Math.round(sc.width * scale)}px`;
+  outer.style.height = `${Math.round(sc.height * scale)}px`;
+  canvas.style.width = `${sc.width}px`;
+  canvas.style.height = `${sc.height}px`;
+  canvas.style.transform = `scale(${scale})`;
+  canvas.style.background = sc.background || '#ffffff';
+  canvas.innerHTML = '';
+  renderElementsStatic(canvas, sc.backdrop || [], sc.pt_to_px || 1);
+  renderElementsStatic(canvas, sc.elements || [], sc.pt_to_px || 1);
+}
+
+function attachElementInteractions(node, el) {
+  node.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('rh')) return;
+    if (e.target.isContentEditable || String(state.editingId) === String(el.shape_id)) return;
+    e.stopPropagation();
+    if (e.detail >= 2) return;
+
+    const wasSelected = String(state.selectedId) === String(el.shape_id);
+    if (!wasSelected) {
+      state.selectedId = el.shape_id;
+      if (el.kind !== 'table') state.selectedCell = null;
+      state.editingId = null;
+      for (const n of byId('slideCanvas').querySelectorAll('.el-node.selected')) {
+        n.classList.remove('selected', 'editing');
+        for (const h of n.querySelectorAll('.rh')) h.remove();
+      }
+      node.classList.add('selected');
+      addResizeHandles(node, el);
+      syncFormatBar();
+    }
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = el.x;
+    const origY = el.y;
+    let moved = false;
+
+    const onMove = (ev) => {
+      const dx = (ev.clientX - startX) / state.stageScale;
+      const dy = (ev.clientY - startY) / state.stageScale;
+      if (!moved && Math.hypot(dx, dy) > 3) { moved = true; pushUndoSnapshot(); }
+      if (!moved) return;
+      el.x = Math.round((origX + dx) * 10) / 10;
+      el.y = Math.round((origY + dy) * 10) / 10;
+      node.style.left = `${el.x}px`;
+      node.style.top = `${el.y}px`;
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (moved) {
+        recordOp({ op: 'geometry', shape_id: el.shape_id, x: el.x, y: el.y, w: el.w, h: el.h });
+        renderThumbScene(state.scene);
+      }
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  if (el.kind === 'text' || el.kind === 'shape') {
+    node.addEventListener('dblclick', (e) => { e.stopPropagation(); enterTextEdit(el); });
+  }
+}
+
+function addResizeHandles(node, el) {
+  for (const dir of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+    const h = document.createElement('div');
+    h.className = `rh rh-${dir}`;
+    h.addEventListener('pointerdown', (e) => {
+      e.stopPropagation(); e.preventDefault();
+      pushUndoSnapshot();
+      const startX = e.clientX, startY = e.clientY;
+      const ox = el.x, oy = el.y, ow = el.w, oh = el.h;
+
+      const onMove = (ev) => {
+        const dx = (ev.clientX - startX) / state.stageScale;
+        const dy = (ev.clientY - startY) / state.stageScale;
+        let nx = ox, ny = oy, nw = ow, nh = oh;
+        if (dir.includes('e')) nw = Math.max(24, ow + dx);
+        if (dir.includes('s')) nh = Math.max(18, oh + dy);
+        if (dir.includes('w')) { nw = Math.max(24, ow - dx); nx = ox + (ow - nw); }
+        if (dir.includes('n')) { nh = Math.max(18, oh - dy); ny = oy + (oh - nh); }
+        el.x = Math.round(nx * 10) / 10; el.y = Math.round(ny * 10) / 10;
+        el.w = Math.round(nw * 10) / 10; el.h = Math.round(nh * 10) / 10;
+        node.style.left = `${el.x}px`; node.style.top = `${el.y}px`;
+        node.style.width = `${el.w}px`; node.style.height = `${el.h}px`;
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        recordOp({ op: 'geometry', shape_id: el.shape_id, x: el.x, y: el.y, w: el.w, h: el.h });
+        renderThumbScene(state.scene);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+    node.appendChild(h);
+  }
+}
+
+function enterTextEdit(el) {
+  state.selectedId = el.shape_id;
+  state.editingId = el.shape_id;
+  renderSceneCanvas();
+  syncFormatBar();
+
+  const node = byId('slideCanvas').querySelector(`[data-shape-id="${el.shape_id}"]`);
+  const inner = node?.querySelector('.el-text-inner');
+  if (!inner) return;
+
+  const plainOrig = (el.paragraphs || []).map((p) => p.text).join('\n');
+  const firstP = (el.paragraphs && el.paragraphs[0]) || { font_size_pt: 18, color: '#111827', align: 'left', bold: false, italic: false, font: 'Inter' };
+  const px = Math.max(8, (firstP.font_size_pt || 18) * (state.scene?.pt_to_px || 1));
+
+  inner.contentEditable = 'true';
+  inner.style.fontSize = `${px.toFixed(1)}px`;
+  inner.style.color = firstP.color || '#111827';
+  inner.style.fontWeight = firstP.bold ? '700' : '400';
+  inner.style.textAlign = firstP.align || 'left';
+  inner.style.whiteSpace = 'pre-wrap';
+  inner.textContent = plainOrig;
+  inner.focus();
+
+  const commit = () => {
+    inner.contentEditable = 'false';
+    const nextText = inner.innerText.replace(/\r/g, '');
+    state.editingId = null;
+    if (nextText !== plainOrig) {
+      pushUndoSnapshot();
+      const lines = nextText.split('\n');
+      el.paragraphs = lines.map((line, i) => {
+        const orig = (el.paragraphs && el.paragraphs[i]) || firstP;
+        return {
+          ...orig,
+          text: line,
+          runs: [{
+            text: line, font_size_pt: orig.font_size_pt, bold: orig.bold,
+            italic: orig.italic, underline: orig.underline, color: orig.color, font: orig.font,
+          }],
+        };
+      });
+      recordOp({ op: 'text', shape_id: el.shape_id, text: nextText });
+      renderThumbScene(state.scene);
+    }
+    renderSceneCanvas();
+  };
+
+  inner.addEventListener('blur', commit, { once: true });
+  inner.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') { ev.stopPropagation(); inner.blur(); }
+  });
+}
+
+byId('stageViewport').addEventListener('pointerdown', (e) => {
+  if (e.target === byId('stageViewport') || e.target === byId('slideCanvas') || e.target === byId('slideOuter')) {
+    if (state.selectedId != null || state.editingId != null) {
+      state.selectedId = null;
+      state.selectedCell = null;
+      state.editingId = null;
+      renderSceneCanvas();
+      syncFormatBar();
+    }
+  }
+});
+
+function getSelectedTableCell(el) {
+  if (!el || el.kind !== 'table') return null;
+  if (state.selectedCell && String(state.selectedCell.shape_id) === String(el.shape_id)) {
+    for (const row of el.rows || []) {
+      for (const c of row) {
+        if (c.r === state.selectedCell.r && c.c === state.selectedCell.c) return c;
+      }
+    }
+  }
+  return null;
+}
+
+function syncFormatBar() {
+  const el = getSelectedEl();
+  const isText = el && (el.kind === 'text' || el.kind === 'shape');
+  const isTable = el && el.kind === 'table';
+  const canFormat = Boolean(isText || isTable);
+  const controls = ['btnFontDec', 'fontSizeInput', 'btnFontInc', 'btnBold', 'btnItalic', 'btnUnderline', 'textColorInput', 'fillColorInput', 'btnFillClear', 'btnAlignL', 'btnAlignC', 'btnAlignR'];
+  for (const id of controls) byId(id).disabled = !canFormat;
+  byId('btnDeleteEl').disabled = !el;
+
+  if (!canFormat) {
+    for (const id of ['btnBold', 'btnItalic', 'btnUnderline', 'btnAlignL', 'btnAlignC', 'btnAlignR']) byId(id).classList.remove('active');
+    return;
+  }
+
+  if (isTable) {
+    const cell = getSelectedTableCell(el) || (el.rows?.[0]?.[0]) || {};
+    byId('fontSizeInput').value = Math.round(cell.font_size_pt || 12);
+    byId('btnBold').classList.toggle('active', Boolean(cell.bold));
+    byId('btnItalic').classList.toggle('active', Boolean(cell.italic));
+    byId('btnUnderline').classList.toggle('active', Boolean(cell.underline));
+    byId('textColorInput').value = (cell.color && cell.color.startsWith('#') && cell.color.length === 7) ? cell.color : '#111827';
+    const bgHex = cell.bg_hex || (cell.bg && cell.bg.startsWith('#') && cell.bg.length === 7 ? cell.bg : '#ffffff');
+    byId('fillColorInput').value = bgHex;
+    byId('btnAlignL').classList.toggle('active', (cell.align || 'left') === 'left');
+    byId('btnAlignC').classList.toggle('active', cell.align === 'center');
+    byId('btnAlignR').classList.toggle('active', cell.align === 'right');
+    return;
+  }
+
+  const fp = (el.paragraphs && el.paragraphs[0]) || {};
+  byId('fontSizeInput').value = Math.round(fp.font_size_pt || 18);
+  byId('btnBold').classList.toggle('active', Boolean(fp.bold));
+  byId('btnItalic').classList.toggle('active', Boolean(fp.italic));
+  byId('btnUnderline').classList.toggle('active', Boolean(fp.underline));
+  byId('textColorInput').value = (fp.color && fp.color.startsWith('#') && fp.color.length === 7) ? fp.color : '#111827';
+  byId('fillColorInput').value = (el.fill_hex && el.fill_hex.startsWith('#') && el.fill_hex.length === 7) ? el.fill_hex : '#ffffff';
+  byId('btnAlignL').classList.toggle('active', (fp.align || 'left') === 'left');
+  byId('btnAlignC').classList.toggle('active', fp.align === 'center');
+  byId('btnAlignR').classList.toggle('active', fp.align === 'right');
+}
+
+function applyStyleToSelected(patch) {
+  const el = getSelectedEl();
+  if (!el) return;
+
+  if (el.kind === 'table') {
+    pushUndoSnapshot();
+    const selCell = getSelectedTableCell(el);
+    const targets = selCell ? [selCell] : (el.rows || []).flat();
+    for (const c of targets) {
+      if (patch.fill_transparent) { c.bg = 'transparent'; c.bg_hex = null; }
+      else if (patch.fill_hex) { c.bg = patch.fill_hex; c.bg_hex = patch.fill_hex; }
+      if (patch.align) c.align = patch.align;
+      if (patch.font_size_pt != null) c.font_size_pt = patch.font_size_pt;
+      if (patch.bold != null) c.bold = patch.bold;
+      if (patch.italic != null) c.italic = patch.italic;
+      if (patch.underline != null) c.underline = patch.underline;
+      if (patch.color) c.color = patch.color;
+    }
+    const opPayload = { op: 'table_cell_style', shape_id: el.shape_id, ...patch };
+    if (selCell) { opPayload.r = selCell.r; opPayload.c = selCell.c; }
+    recordOp(opPayload);
+    renderSceneCanvas();
+    renderThumbScene(state.scene);
+    syncFormatBar();
+    return;
+  }
+
+  if (el.kind !== 'text' && el.kind !== 'shape') return;
+  pushUndoSnapshot();
+
+  if (patch.fill_transparent) { el.fill = 'transparent'; el.fill_hex = null; }
+  else if (patch.fill_hex) { el.fill = patch.fill_hex; el.fill_hex = patch.fill_hex; }
+
+  for (const p of el.paragraphs || []) {
+    if (patch.align) p.align = patch.align;
+    if (patch.font_size_pt != null) p.font_size_pt = patch.font_size_pt;
+    if (patch.bold != null) p.bold = patch.bold;
+    if (patch.italic != null) p.italic = patch.italic;
+    if (patch.underline != null) p.underline = patch.underline;
+    if (patch.color) p.color = patch.color;
+    for (const r of p.runs || []) {
+      if (patch.font_size_pt != null) r.font_size_pt = patch.font_size_pt;
+      if (patch.bold != null) r.bold = patch.bold;
+      if (patch.italic != null) r.italic = patch.italic;
+      if (patch.underline != null) r.underline = patch.underline;
+      if (patch.color) r.color = patch.color;
+    }
+  }
+
+  recordOp({ op: 'style', shape_id: el.shape_id, ...patch });
+  renderSceneCanvas();
+  renderThumbScene(state.scene);
+  syncFormatBar();
+}
+
+byId('btnFontDec').onclick = () => applyStyleToSelected({ font_size_pt: Math.max(8, (Number(byId('fontSizeInput').value) || 18) - 2) });
+byId('btnFontInc').onclick = () => applyStyleToSelected({ font_size_pt: Math.min(120, (Number(byId('fontSizeInput').value) || 18) + 2) });
+byId('fontSizeInput').onchange = (e) => applyStyleToSelected({ font_size_pt: Math.max(8, Math.min(120, Number(e.target.value) || 18)) });
+byId('btnBold').onclick = () => applyStyleToSelected({ bold: !byId('btnBold').classList.contains('active') });
+byId('btnItalic').onclick = () => applyStyleToSelected({ italic: !byId('btnItalic').classList.contains('active') });
+byId('btnUnderline').onclick = () => applyStyleToSelected({ underline: !byId('btnUnderline').classList.contains('active') });
+byId('textColorInput').oninput = (e) => applyStyleToSelected({ color: e.target.value });
+byId('fillColorInput').oninput = (e) => applyStyleToSelected({ fill_hex: e.target.value });
+byId('btnFillClear').onclick = () => applyStyleToSelected({ fill_transparent: true });
+byId('btnAlignL').onclick = () => applyStyleToSelected({ align: 'left' });
+byId('btnAlignC').onclick = () => applyStyleToSelected({ align: 'center' });
+byId('btnAlignR').onclick = () => applyStyleToSelected({ align: 'right' });
+
+byId('btnAddText').onclick = () => {
+  if (!state.scene) return;
+  pushUndoSnapshot();
+  const tid = `new_${state.tempIdSeq++}`;
+  const txt = t('defaultNewText');
+  const el = {
+    shape_id: tid, name: 'TextBox', kind: 'text', editable: true,
+    x: 120, y: 120, w: 320, h: 64, rot: 0, prst: 'rect',
+    fill: 'transparent', fill_hex: null, stroke: null, stroke_w: 0, v_align: 'top',
+    pad: { l: 6, r: 6, t: 4, b: 4 },
+    paragraphs: [{
+      text: txt, align: 'left', level: 0, bullet: '', font_size_pt: 20,
+      bold: false, italic: false, underline: false, color: '#111827', font: 'Inter',
+      runs: [{ text: txt, font_size_pt: 20, bold: false, italic: false, underline: false, color: '#111827', font: 'Inter' }],
+    }],
+  };
+  state.scene.elements.push(el);
+  state.selectedId = tid;
+  state.selectedCell = null;
+  recordOp({ op: 'add_textbox', temp_id: tid, x: el.x, y: el.y, w: el.w, h: el.h, text: txt, font_size_pt: 20, color: '#111827' });
+  renderSceneCanvas();
+  syncFormatBar();
+};
+
+byId('btnDeleteEl').onclick = () => {
+  const el = getSelectedEl();
+  if (!el || !state.scene) return;
+  pushUndoSnapshot();
+  state.scene.elements = state.scene.elements.filter((x) => String(x.shape_id) !== String(el.shape_id));
+  state.selectedId = null;
+  state.selectedCell = null;
+  state.editingId = null;
+  recordOp({ op: 'delete_shape', shape_id: el.shape_id });
+  renderSceneCanvas();
+  renderThumbScene(state.scene);
+  syncFormatBar();
+};
+
+byId('btnUndo').onclick = () => {
+  if (!state.undoStack.length) return;
+  state.redoStack.push({ scene: JSON.parse(JSON.stringify(state.scene)), ops: JSON.parse(JSON.stringify(state.pendingOps)), notesDirty: state.notesDirty });
+  const snap = state.undoStack.pop();
+  state.scene = snap.scene; state.pendingOps = snap.ops; state.notesDirty = snap.notesDirty;
+  byId('notesTextarea').value = state.scene.notes || '';
+  renderSceneCanvas(); renderThumbScene(state.scene); syncFormatBar(); updateDirtyUI();
+};
+
+byId('btnRedo').onclick = () => {
+  if (!state.redoStack.length) return;
+  state.undoStack.push({ scene: JSON.parse(JSON.stringify(state.scene)), ops: JSON.parse(JSON.stringify(state.pendingOps)), notesDirty: state.notesDirty });
+  const snap = state.redoStack.pop();
+  state.scene = snap.scene; state.pendingOps = snap.ops; state.notesDirty = snap.notesDirty;
+  byId('notesTextarea').value = state.scene.notes || '';
+  renderSceneCanvas(); renderThumbScene(state.scene); syncFormatBar(); updateDirtyUI();
+};
+
+async function saveCurrentSlide() {
+  if (!state.deck || !state.scene || !isDirty()) return;
+  const saveBtn = byId('btnSave');
+  saveBtn.disabled = true;
+  saveBtn.textContent = t('savingBtn');
+  try {
+    const res = await app.callServerTool({
+      name: 'app_save_slide',
+      arguments: {
+        file_path: state.deck.file_path,
+        slide_index: state.activeSlide,
+        ops: state.pendingOps,
+        notes: state.notesDirty ? byId('notesTextarea').value : null,
+      },
+    });
+    if (res?.isError) { showToast(res.content?.[0]?.text || 'Save failed'); return; }
+    const sc = res?.structuredContent;
+    if (sc?.scene) {
+      state.scene = sc.scene;
+      state.deck = { ...state.deck, ...sc.overview };
+      state.pendingOps = [];
+      state.notesDirty = false;
+      state.undoStack = [];
+      state.redoStack = [];
+      state.selectedId = null;
+      state.selectedCell = null;
+      byId('notesTextarea').value = state.scene.notes || '';
+      byId('fsNotesBody').textContent = state.scene.notes || t('noNotes');
+      renderSceneCanvas(); renderThumbScene(state.scene); syncFormatBar();
+      showToast(t('savedToast', sc.applied));
+    }
+  } catch (err) {
+    showToast(`Save error: ${err?.message || err}`);
+  } finally {
+    updateDirtyUI();
+  }
+}
+
+byId('btnSave').onclick = saveCurrentSlide;
+byId('btnLang').onclick = () => {
+  state._userPickedLang = true;
+  state.lang = state.lang === 'en' ? 'zh' : 'en';
+  applyLocaleUI();
+};
+
+byId('notesTextarea').addEventListener('input', () => {
+  if (!state.scene) return;
+  state.scene.notes = byId('notesTextarea').value;
+  state.notesDirty = true;
+  byId('fsNotesBody').textContent = state.scene.notes || t('noNotes');
+  updateDirtyUI();
+});
+
+byId('btnToggleNotes').onclick = () => {
+  const hidden = byId('notesWrap').classList.toggle('hidden');
+  byId('btnToggleNotes').classList.toggle('active', !hidden);
+  setTimeout(() => renderSceneCanvas(), 20);
+};
+
+async function loadDeck(filePath, activeSlide = 1) {
+  if (!filePath) return;
+  try {
+    const res = await app.callServerTool({ name: 'app_load_deck', arguments: { file_path: filePath, active_slide: activeSlide } });
+    if (res?.isError) { showToast(res.content?.[0]?.text || 'Failed to open'); return; }
+    applyOverview(res.structuredContent);
+  } catch (err) {
+    showToast(`Open error: ${err?.message || err}`);
+  }
+}
+
+byId('fileSelect').onchange = (e) => { if (e.target.value) loadDeck(e.target.value, 1); };
+byId('btnReload').onclick = () => { if (state.deck) loadDeck(state.deck.file_path, state.activeSlide); };
+byId('btnToggleRail').onclick = () => {
+  const h = byId('thumbRail').classList.toggle('hidden');
+  byId('btnToggleRail').classList.toggle('active', !h);
+  setTimeout(() => renderSceneCanvas(), 20);
+};
+byId('btnOpenPath').onclick = () => {
+  byId('pathBar').classList.toggle('open');
+  if (byId('pathBar').classList.contains('open')) {
+    byId('customPathInput').value = state.deck?.file_path || '';
+    byId('customPathInput').focus();
+  }
+};
+byId('btnCancelPath').onclick = () => byId('pathBar').classList.remove('open');
+byId('btnLoadPath').onclick = () => {
+  const p = byId('customPathInput').value.trim();
+  if (p) { byId('pathBar').classList.remove('open'); loadDeck(p, 1); }
+};
+byId('btnEmptyOpen').onclick = () => {
+  const p = byId('emptyPathInput').value.trim();
+  if (p) loadDeck(p, 1);
+};
+byId('btnOpenApp').onclick = async () => {
+  if (!state.deck) return;
+  await app.callServerTool({ name: 'app_open_external', arguments: { file_path: state.deck.file_path, action: 'open' } });
+  showToast(t('openingApp'));
+};
+byId('btnReveal').onclick = async () => {
+  if (!state.deck) return;
+  await app.callServerTool({ name: 'app_open_external', arguments: { file_path: state.deck.file_path, action: 'reveal' } });
+};
+
+byId('btnPrev').onclick = () => switchSlide(state.activeSlide - 1);
+byId('btnNext').onclick = () => switchSlide(state.activeSlide + 1);
+byId('fsPrev').onclick = () => switchSlide(state.activeSlide - 1);
+byId('fsNext').onclick = () => switchSlide(state.activeSlide + 1);
+
+function updateFsNotes() {
+  byId('fsNotesPanel').classList.toggle('hidden', !state.fsNotesVisible);
+  byId('fsToggleNotes').classList.toggle('active', state.fsNotesVisible);
+  byId('fsNotesBody').style.fontSize = `${state.fsNotesFont}px`;
+  if (state.isFullscreen) requestAnimationFrame(() => renderFullscreenScene());
+}
+function setFullscreen(on) {
+  state.isFullscreen = on;
+  byId('fsOverlay').classList.toggle('open', on);
+  if (on) { updateFsNotes(); requestAnimationFrame(() => renderFullscreenScene()); }
+}
+byId('btnPresent').onclick = () => setFullscreen(true);
+byId('fsClose').onclick = () => setFullscreen(false);
+byId('fsToggleNotes').onclick = () => { state.fsNotesVisible = !state.fsNotesVisible; updateFsNotes(); };
+byId('fsNotesDec').onclick = () => { state.fsNotesFont = Math.max(11, state.fsNotesFont - 2); updateFsNotes(); };
+byId('fsNotesInc').onclick = () => { state.fsNotesFont = Math.min(24, state.fsNotesFont + 2); updateFsNotes(); };
+
+window.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveCurrentSlide(); return; }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && state.editingId == null) {
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (tag !== 'input' && tag !== 'textarea') {
+      e.preventDefault();
+      if (e.shiftKey) byId('btnRedo').click(); else byId('btnUndo').click();
+      return;
+    }
+  }
+  const tag = (document.activeElement?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || state.editingId != null) return;
+  if (!state.deck) return;
+
+  const sel = getSelectedEl();
+  if (sel && !state.isFullscreen && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 2;
+    pushUndoSnapshot();
+    if (e.key === 'ArrowLeft') sel.x -= step;
+    if (e.key === 'ArrowRight') sel.x += step;
+    if (e.key === 'ArrowUp') sel.y -= step;
+    if (e.key === 'ArrowDown') sel.y += step;
+    recordOp({ op: 'geometry', shape_id: sel.shape_id, x: sel.x, y: sel.y, w: sel.w, h: sel.h });
+    renderSceneCanvas();
+    return;
+  }
+  if (sel && !state.isFullscreen && (e.key === 'Delete' || e.key === 'Backspace')) {
+    e.preventDefault(); byId('btnDeleteEl').click(); return;
+  }
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+    e.preventDefault(); switchSlide(state.activeSlide + 1);
+  } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+    e.preventDefault(); switchSlide(state.activeSlide - 1);
+  } else if (e.key === 'Escape') {
+    if (state.isFullscreen) setFullscreen(false);
+    else if (state.selectedId != null) { state.selectedId = null; state.selectedCell = null; renderSceneCanvas(); syncFormatBar(); }
+  } else if (e.key === 'f' || e.key === 'F') {
+    setFullscreen(!state.isFullscreen);
+  } else if (e.key === 'n' || e.key === 'N') {
+    if (state.isFullscreen) byId('fsToggleNotes').click(); else byId('btnToggleNotes').click();
+  }
+});
+
+const ro = new ResizeObserver(() => renderSceneCanvas());
+ro.observe(byId('stageViewport'));
+ro.observe(byId('fsStage'));
+
+byId('thumbRail').addEventListener('wheel', (e) => {
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault();
+    byId('thumbRail').scrollLeft += e.deltaY;
+  }
+}, { passive: false });
+
+function bindVerticalResizer(splitterEl, panelEl, minH, maxRatio, onResize) {
+  splitterEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    splitterEl.classList.add('dragging');
+    splitterEl.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startH = panelEl.getBoundingClientRect().height;
+    const maxH = Math.max(minH + 40, Math.round(window.innerHeight * maxRatio));
+
+    const onMove = (ev) => {
+      const nextH = Math.max(minH, Math.min(maxH, Math.round(startH + (startY - ev.clientY))));
+      panelEl.style.height = `${nextH}px`;
+      if (onResize) onResize();
+    };
+    const onUp = () => {
+      splitterEl.classList.remove('dragging');
+      splitterEl.removeEventListener('pointermove', onMove);
+      splitterEl.removeEventListener('pointerup', onUp);
+      splitterEl.removeEventListener('pointercancel', onUp);
+      if (onResize) onResize();
+    };
+    splitterEl.addEventListener('pointermove', onMove);
+    splitterEl.addEventListener('pointerup', onUp);
+    splitterEl.addEventListener('pointercancel', onUp);
+  });
+}
+bindVerticalResizer(byId('notesSplitter'), byId('notesWrap'), 78, 0.72, () => renderSceneCanvas());
+bindVerticalResizer(byId('fsNotesSplitter'), byId('fsNotesPanel'), 80, 0.75, () => {
+  if (state.isFullscreen) renderFullscreenScene();
+});
+
+app.ontoolinput = ({ arguments: args }) => {
+  state.receivedToolEvent = true;
+  state.pendingInputArgs = args || {};
+};
+app.ontoolresult = (result) => {
+  state.receivedToolEvent = true;
+  if (result?.structuredContent) applyOverview(result.structuredContent);
+  else if (state.pendingInputArgs?.file_path) loadDeck(state.pendingInputArgs.file_path, state.pendingInputArgs.slide_index || 1);
+};
+app.onhostcontextchanged = (ctx) => applyHostCtx(ctx);
+
+state.lang = detectLocale();
+applyLocaleUI();
+
+await app.connect();
+applyHostCtx(app.getHostContext());
+
+setTimeout(async () => {
+  if (!state.receivedToolEvent && !state.deck) {
+    try {
+      const res = await app.callServerTool({ name: 'app_list_files', arguments: {} });
+      const files = res?.structuredContent?.files || [];
+      renderFileOptions(files, null);
+      if (files.length > 0 && !state.deck) loadDeck(files[0].file_path, 1);
+    } catch (_) {}
+  }
+}, 500);
+  </script>
+</body>
+</html>

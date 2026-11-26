@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "slidecraft": {
+      "command": "python3",
+      "args": [
+        "${PLUGIN_ROOT}/server/launcher.py",
+        "--data_dir=${PLUGIN_DATA}"
+      ]
+    }
+  }
+}

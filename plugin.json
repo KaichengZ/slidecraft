@@ -1,0 +1,18 @@
+{
+  "name": "slidecraft",
+  "displayName": "SlideCraft",
+  "description": "Lightweight lossless in-place .pptx slide editor and presentation workflow for Antigravity: edit text, typography, colors, tables, layout, and speaker notes right in the side pane and save directly back to the source deck.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Kai",
+    "url": "https://github.com/KaichengZ"
+  },
+  "homepage": "https://github.com/KaichengZ/slidecraft",
+  "repository": "https://github.com/KaichengZ/slidecraft",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Create a 10-slide executive deck on Q4 growth with 3 visual style options, then open it in SlideCraft",
+    "Open my latest .pptx presentation in SlideCraft so I can fine-tune typography and layout",
+    "Refine slide 3 into a two-column layout with a summary table and refresh SlideCraft"
+  ]
+}
